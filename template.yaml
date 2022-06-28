@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  customers-api
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Runtime: python3.9
+    Environment:
+      Variables:
+        CUSTOMERS_TABLE: !Ref CustomersTable
+
+Resources:
+  CustomersTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: id
+        Type: Number
+  CreateCustomerFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: customers_api/
+      Handler: create.lambda_handler
+      Architectures:
+        - x86_64
+      Events:
+        CreateCustomers:
+          Type: Api
+          Properties:
+            Path: /customers
+            Method: POST
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CustomersTable
+  ReadCustomerFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: customers_api/
+      Handler: read.lambda_handler
+      Events:
+        CreateOrders:
+          Type: Api
+          Properties:
+            Path: /customers/{id}
+            Method: GET
+      Architectures:
+        - x86_64
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref CustomersTable
+Outputs:
+  CreateCustomersAPI:
+    Description: "API Gateway endpoint url for creating customers"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/customers"
+  CreateOrderFunction:
+    Description: "Create Customer function ARN"
+    Value: !GetAtt CreateCustomerFunction.Arn
+  CreateOrderFunctionIamRole:
+    Description: "Create Customer function IAM Role ARN"
+    Value: !GetAtt CreateCustomerFunctionRole.Arn
